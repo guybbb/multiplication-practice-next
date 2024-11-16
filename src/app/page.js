@@ -1,22 +1,25 @@
 // src/app/page.js
 
-'use client';
+"use client";
 
-import { useState, useEffect, useRef } from 'react';
-import confetti from 'canvas-confetti';
-import styles from './page.module.css';
+import { useState, useEffect, useRef } from "react";
+import confetti from "canvas-confetti";
+import styles from "./page.module.css";
+
+const playlistId = "PLD72Ylz-Y01vcGTYmEaN9nz02o0yZMWy8";
 
 export default function Home() {
   // State variables
   const [num1, setNum1] = useState(null);
   const [num2, setNum2] = useState(null);
-  const [userAnswer, setUserAnswer] = useState('');
-  const [feedback, setFeedback] = useState('');
-  const [feedbackClass, setFeedbackClass] = useState('');
+  const [userAnswer, setUserAnswer] = useState("");
+  const [feedback, setFeedback] = useState("");
+  const [feedbackClass, setFeedbackClass] = useState("");
   const [score, setScore] = useState(0);
   const [streak, setStreak] = useState(0);
   const [highestStreak, setHighestStreak] = useState(0);
   const [questionsAnswered, setQuestionsAnswered] = useState(0);
+  const [showNext, setShowNext] = useState(false);
   const totalQuestions = 10;
   const answerInputRef = useRef(null);
 
@@ -57,6 +60,16 @@ export default function Home() {
     }, 250);
   }
 
+  function getRandomVideoFromPlaylist(playlistId, maxVideos = 50) {
+    // Generate a random video index
+    const randomIndex = Math.floor(Math.random() * maxVideos) + 1; // 1-based index
+
+    // Construct the random video URL
+    return `https://www.youtube.com/embed/videoseries?list=${playlistId}&index=${randomIndex}`;
+
+    return randomVideoURL;
+  }
+
   // 2. Fireworks Animation
   function launchFireworks() {
     var duration = 2 * 1000;
@@ -70,17 +83,17 @@ export default function Home() {
       }
 
       confetti({
-        particleCount: 100,        // More particles for a denser effect
-        startVelocity: 50,        // Higher velocity for more explosive effect
-        spread: 120,              // Narrower spread for a more focused burst
-        ticks: 80,               // More ticks for longer-lasting particles
-        origin: { x: Math.random(), y: 1 },  // Launch from bottom of screen
-        colors: ['#FF0000', '#FFD700', '#FF8C00', '#FF69B4', '#FFB6C1'], // Bright firework colors
-        gravity: 1.2,            // Higher gravity for more arc
-        scalar: 0.8,             // Slightly smaller particles
-        shapes: ['star']         // Star-shaped particles
+        particleCount: 100, // More particles for a denser effect
+        startVelocity: 50, // Higher velocity for more explosive effect
+        spread: 120, // Narrower spread for a more focused burst
+        ticks: 80, // More ticks for longer-lasting particles
+        origin: { x: Math.random(), y: 1 }, // Launch from bottom of screen
+        colors: ["#FF0000", "#FFD700", "#FF8C00", "#FF69B4", "#FFB6C1"], // Bright firework colors
+        gravity: 1.2, // Higher gravity for more arc
+        scalar: 0.8, // Slightly smaller particles
+        shapes: ["star"], // Star-shaped particles
       });
-    }, 150)
+    }, 150);
   }
 
   // 3. Bubbles Animation
@@ -102,15 +115,15 @@ export default function Home() {
         origin: {
           x: Math.random(),
           // since particles fall down, skew start toward the top
-          y: (Math.random() * skew) - 0.2
+          y: Math.random() * skew - 0.2,
         },
-        colors: ['#ffffff'],
-        shapes: ['circle'],
+        colors: ["#ffffff"],
+        shapes: ["circle"],
         gravity: randomInRange(0.4, 0.6),
         scalar: randomInRange(0.4, 1),
-        drift: randomInRange(-0.4, 0.4)       // Star-shaped particles
+        drift: randomInRange(-0.4, 0.4), // Star-shaped particles
       });
-    }, 150)
+    }, 150);
   }
 
   // 4. Stars Animation
@@ -118,7 +131,7 @@ export default function Home() {
     var duration = 2 * 1000;
     var animationEnd = Date.now() + duration;
 
-    var interval = setInterval( () => {
+    var interval = setInterval(() => {
       var timeLeft = animationEnd - Date.now();
 
       if (timeLeft <= 0) {
@@ -130,13 +143,18 @@ export default function Home() {
         angl: 60,
         spread: 55,
         origin: { x: 0 },
-        colors: colors
-      })},250);
+        colors: colors,
+      });
+    }, 250);
   }
 
-
- // Array of animation functions
-  const animations = [launchFireworks, launchConfetti, launchBubbles, launchStars];
+  // Array of animation functions
+  const animations = [
+    launchFireworks,
+    launchConfetti,
+    launchBubbles,
+    launchStars,
+  ];
 
   useEffect(() => {
     // Focus on the input field when the component mounts
@@ -148,7 +166,14 @@ export default function Home() {
   }, []);
 
   function generateNumber() {
-    return Math.floor(Math.random() * 9) + 2;
+    const numbers = Array.from({ length: 8 }, (_, i) => i + 2);
+    
+    // Fisher-Yates shuffle
+    for (let i = numbers.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [numbers[i], numbers[j]] = [numbers[j], numbers[i]];
+    }
+    return numbers[0];
   }
 
   function startGame() {
@@ -189,29 +214,27 @@ export default function Home() {
     const parsedUserAnswer = parseInt(userAnswer, 10);
 
     if (isNaN(parsedUserAnswer)) {
-      setFeedback('🚫 Please enter a valid number.');
-      setFeedbackClass('incorrect');
+      setFeedback("🚫 Please enter a valid number.");
+      setFeedbackClass("incorrect");
     } else if (parsedUserAnswer === correctAnswer) {
       setStreak((prev) => prev + 1);
       setScore((prev) => prev + 1);
-      setFeedback('🎉 Correct! Great job! 🎉');
-      setFeedbackClass('correct');
+      setFeedback("🎉 Correct! Great job! 🎉");
+      setFeedbackClass("correct");
       updateStreak();
       checkForCelebration();
-      nextQuestion();
+      setShowNext(true); // Show the next button
     } else {
       setFeedback(`❌ Oops! The correct answer is ${correctAnswer}.`);
-      setFeedbackClass('incorrect');
+      setFeedbackClass("incorrect");
       setStreak(0);
       updateStreak();
 
-      // Add the failed question to failedQuestions
       setFailedQuestions((prevFailedQuestions) => [
         ...prevFailedQuestions,
         { num1, num2 },
       ]);
-
-      nextQuestion();
+      setShowNext(true); // Show the next button
     }
   }
 
@@ -227,7 +250,8 @@ export default function Home() {
   function checkForCelebration() {
     if (streakMilestones.includes(streak + 1)) {
       // Randomly select an animation
-      const randomAnimation = animations[Math.floor(Math.random() * animations.length)];
+      const randomAnimation =
+        animations[Math.floor(Math.random() * animations.length)];
       randomAnimation();
     }
   }
@@ -239,9 +263,9 @@ export default function Home() {
       setCurrentQuestionIndex(nextIndex);
       setNum1(questionQueue[nextIndex].num1);
       setNum2(questionQueue[nextIndex].num2);
-      setUserAnswer('');
-      setFeedback('');
-      setFeedbackClass('');
+      setUserAnswer("");
+      setFeedback("");
+      setFeedbackClass("");
       if (answerInputRef.current) {
         answerInputRef.current.focus();
       }
@@ -258,9 +282,20 @@ export default function Home() {
 
   function restartGame() {
     startGame();
-    setUserAnswer('');
-    setFeedback('');
-    setFeedbackClass('');
+    setUserAnswer("");
+    setFeedback("");
+    setFeedbackClass("");
+    if (answerInputRef.current) {
+      answerInputRef.current.focus();
+    }
+  }
+
+  function handleNext() {
+    nextQuestion();
+    setShowNext(false); // Hide the next button
+    setUserAnswer("");
+    setFeedback("");
+    setFeedbackClass("");
     if (answerInputRef.current) {
       answerInputRef.current.focus();
     }
@@ -274,11 +309,9 @@ export default function Home() {
           <div className={styles.score}>Score: {score}</div>
           <div className={styles.streak}>Streak: {streak} 🔥</div>
           <div className={styles.question}>
-            {num1 !== null && num2 !== null ? (
-              `What is ${num1} × ${num2}?`
-            ) : (
-              'Loading question...'
-            )}
+            {num1 !== null && num2 !== null
+              ? `What is ${num1} × ${num2}?`
+              : "Loading question..."}
           </div>
           <input
             type="number"
@@ -287,7 +320,7 @@ export default function Home() {
             value={userAnswer}
             onChange={(e) => setUserAnswer(e.target.value)}
             onKeyDown={(e) => {
-              if (e.key === 'Enter') {
+              if (e.key === "Enter") {
                 checkAnswer();
               }
             }}
@@ -304,25 +337,51 @@ export default function Home() {
           <div className={`${styles.feedback} ${styles[feedbackClass]}`}>
             {feedback}
           </div>
+          {showNext && (
+            <button onClick={handleNext} className={styles.btn}>
+              Next Question →
+            </button>
+          )}
           <div className={styles.progressBar}>
             <div
               className={styles.progress}
-              style={{ width: `${(questionsAnswered / totalQuestions) * 100}%` }}
+              style={{
+                width: `${(questionsAnswered / totalQuestions) * 100}%`,
+              }}
             ></div>
           </div>
         </>
       ) : (
         <div className={styles.endGame}>
           <h2>Well Done!</h2>
-          <p>Your final score is {score} out of {totalQuestions}.</p>
+          <p>
+            Your final score is {score} out of {totalQuestions}.
+          </p>
           <p>Your highest streak was {highestStreak} 🔥</p>
+          {score > 7 ? (
+            <div className={styles.videoContainer}>
+              <h3>🎥 Celebrate with this video! 🎥</h3>
+              <iframe
+                width="560"
+                height="315"
+                src={getRandomVideoFromPlaylist(playlistId, 50)}
+                title="YouTube video player"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                allowFullScreen
+              ></iframe>
+            </div>
+          ) : null}
+          <button onClick={restartGame} className={styles.btn}>
+            Play Again
+          </button>
           {failedQuestions.length > 0 ? (
             <>
               <h3>Questions to Review:</h3>
               <ul className={styles.failedQuestionsList}>
                 {failedQuestions.map((question, index) => (
                   <li key={index}>
-                    {question.num1} × {question.num2} = {question.num1 * question.num2}
+                    {question.num1} × {question.num2} ={" "}
+                    {question.num1 * question.num2}
                   </li>
                 ))}
               </ul>
@@ -330,9 +389,6 @@ export default function Home() {
           ) : (
             <p>Great job! You got all the questions correct! 🎉</p>
           )}
-          <button onClick={restartGame} className={styles.btn}>
-            Play Again
-          </button>
         </div>
       )}
     </div>
