@@ -5,8 +5,12 @@
 import { useState, useEffect, useRef } from "react";
 import confetti from "canvas-confetti";
 import styles from "./page.module.css";
+import { funnyVideos } from "./funnyVideos";
+
 
 const playlistId = "PLD72Ylz-Y01vcGTYmEaN9nz02o0yZMWy8";
+const QUESTION_TIMER = 15; // 15 seconds per question
+
 
 export default function Home() {
   // State variables
@@ -22,7 +26,10 @@ export default function Home() {
   const [showNext, setShowNext] = useState(false);
   const totalQuestions = 10;
   const answerInputRef = useRef(null);
-
+  const [timeLeft, setTimeLeft] = useState(QUESTION_TIMER);
+  const [timerActive, setTimerActive] = useState(true);
+  // Add this with other state variables at the top
+  const [isAnswerSubmitted, setIsAnswerSubmitted] = useState(false);
   // New state variables for tracking questions
   const [questionQueue, setQuestionQueue] = useState([]);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
@@ -156,6 +163,35 @@ export default function Home() {
     launchStars,
   ];
 
+  // Add this with other useEffect hooks
+  useEffect(() => {
+    let timer;
+    if (timerActive && timeLeft > 0 && !gameOver && !showNext) {
+      timer = setInterval(() => {
+        setTimeLeft((prev) => prev - 1);
+      }, 1000);
+    } else if (timeLeft === 0 && timerActive) {
+      // Time's up!
+      handleTimeUp();
+    }
+
+    return () => clearInterval(timer);
+  }, [timeLeft, timerActive, gameOver, showNext]);
+
+  // Add this function to handle when time runs out
+  function handleTimeUp() {
+    setTimerActive(false);
+    setFeedback(`⏰ Time's up! The answer is ${num1 * num2}`);
+    setFeedbackClass("incorrect");
+    setStreak(0);
+    updateStreak();
+    setFailedQuestions((prevFailedQuestions) => [
+      ...prevFailedQuestions,
+      { num1, num2 },
+    ]);
+    setShowNext(true);
+  }
+
   useEffect(() => {
     // Focus on the input field when the component mounts
     if (answerInputRef.current) {
@@ -167,7 +203,7 @@ export default function Home() {
 
   function generateNumber() {
     const numbers = Array.from({ length: 8 }, (_, i) => i + 2);
-    
+
     // Fisher-Yates shuffle
     for (let i = numbers.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1));
@@ -200,6 +236,8 @@ export default function Home() {
     setStreak(0);
     setHighestStreak(0);
     setQuestionsAnswered(0);
+    setTimeLeft(QUESTION_TIMER);
+    setTimerActive(true);
     setGameOver(false); // Reset game over state
 
     // Set the first question
@@ -210,6 +248,8 @@ export default function Home() {
   }
 
   function checkAnswer() {
+    setTimerActive(false); // Stop the timer
+    setIsAnswerSubmitted(true);
     const correctAnswer = num1 * num2;
     const parsedUserAnswer = parseInt(userAnswer, 10);
 
@@ -266,11 +306,13 @@ export default function Home() {
       setUserAnswer("");
       setFeedback("");
       setFeedbackClass("");
+      setTimeLeft(QUESTION_TIMER); // Reset timer
+      setTimerActive(true); // Activate timer
+      setIsAnswerSubmitted(false); // Reset submission state
       if (answerInputRef.current) {
         answerInputRef.current.focus();
       }
     } else {
-      // End of questions, show final score
       setTimeout(showFinalScore, 500);
     }
   }
@@ -296,6 +338,7 @@ export default function Home() {
     setUserAnswer("");
     setFeedback("");
     setFeedbackClass("");
+    setIsAnswerSubmitted(false); // Reset submission state
     if (answerInputRef.current) {
       answerInputRef.current.focus();
     }
@@ -313,6 +356,16 @@ export default function Home() {
               ? `What is ${num1} × ${num2}?`
               : "Loading question..."}
           </div>
+          <div className={styles.timer}>
+            Time left: {timeLeft}s
+            <div
+              className={styles.timerBar}
+              style={{
+                width: `${(timeLeft / QUESTION_TIMER) * 100}%`,
+                backgroundColor: timeLeft <= 5 ? "#ff1744" : "#00e676",
+              }}
+            />
+          </div>
           <input
             type="number"
             className={styles.answer}
@@ -320,20 +373,21 @@ export default function Home() {
             value={userAnswer}
             onChange={(e) => setUserAnswer(e.target.value)}
             onKeyDown={(e) => {
-              if (e.key === "Enter") {
+              if (e.key === "Enter" && !isAnswerSubmitted) {
                 checkAnswer();
               }
             }}
             ref={answerInputRef}
-            disabled={num1 === null || num2 === null}
+            disabled={num1 === null || num2 === null || isAnswerSubmitted}
           />
           <button
             onClick={checkAnswer}
             className={styles.btn}
-            disabled={num1 === null || num2 === null}
+            disabled={num1 === null || num2 === null || isAnswerSubmitted}
           >
             Submit
           </button>
+
           <div className={`${styles.feedback} ${styles[feedbackClass]}`}>
             {feedback}
           </div>
@@ -364,7 +418,7 @@ export default function Home() {
               <iframe
                 width="560"
                 height="315"
-                src={getRandomVideoFromPlaylist(playlistId, 50)}
+                src={funnyVideos[Math.floor(Math.random() * funnyVideos.length)].link}
                 title="YouTube video player"
                 allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                 allowFullScreen
