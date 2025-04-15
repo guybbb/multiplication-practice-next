@@ -7,10 +7,18 @@ import confetti from "canvas-confetti";
 import styles from "./page.module.css";
 import { funnyVideos } from "./funnyVideos";
 
-
 const playlistId = "PLD72Ylz-Y01vcGTYmEaN9nz02o0yZMWy8";
 const QUESTION_TIMER = 15; // 15 seconds per question
 
+function getRandomVideo(videos) {
+  if (!videos.length) return null;
+  const shuffled = [...videos];
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+  }
+  return shuffled[0];
+}
 
 export default function Home() {
   // State variables
@@ -24,7 +32,7 @@ export default function Home() {
   const [highestStreak, setHighestStreak] = useState(0);
   const [questionsAnswered, setQuestionsAnswered] = useState(0);
   const [showNext, setShowNext] = useState(false);
-  const totalQuestions = 10;
+  const totalQuestions = 20;
   const answerInputRef = useRef(null);
   const [timeLeft, setTimeLeft] = useState(QUESTION_TIMER);
   const [timerActive, setTimerActive] = useState(true);
@@ -150,7 +158,7 @@ export default function Home() {
         angl: 60,
         spread: 55,
         origin: { x: 0 },
-        colors: colors,
+        colors: ["#FF0000", "#FFD700", "#FF8C00", "#FF69B4", "#FFB6C1"], // Bright firework colors
       });
     }, 250);
   }
@@ -202,7 +210,7 @@ export default function Home() {
   }, []);
 
   function generateNumber() {
-    const numbers = Array.from({ length: 8 }, (_, i) => i + 2);
+    const numbers = Array.from({ length: 7 }, (_, i) => i + 4);
 
     // Fisher-Yates shuffle
     for (let i = numbers.length - 1; i > 0; i--) {
@@ -249,34 +257,43 @@ export default function Home() {
 
   function checkAnswer() {
     setTimerActive(false); // Stop the timer
-    setIsAnswerSubmitted(true);
     const correctAnswer = num1 * num2;
     const parsedUserAnswer = parseInt(userAnswer, 10);
 
     if (isNaN(parsedUserAnswer)) {
       setFeedback("🚫 Please enter a valid number.");
       setFeedbackClass("incorrect");
-    } else if (parsedUserAnswer === correctAnswer) {
+      return; // Don't set isAnswerSubmitted for invalid input
+    }
+
+    setIsAnswerSubmitted(true); // Move this here, after the validation check
+
+    if (parsedUserAnswer === correctAnswer) {
       setStreak((prev) => prev + 1);
       setScore((prev) => prev + 1);
       setFeedback("🎉 Correct! Great job! 🎉");
       setFeedbackClass("correct");
       updateStreak();
       checkForCelebration();
-      setShowNext(true); // Show the next button
+      setShowNext(true);
     } else {
       setFeedback(`❌ Oops! The correct answer is ${correctAnswer}.`);
       setFeedbackClass("incorrect");
       setStreak(0);
       updateStreak();
-
       setFailedQuestions((prevFailedQuestions) => [
         ...prevFailedQuestions,
         { num1, num2 },
       ]);
-      setShowNext(true); // Show the next button
+      setShowNext(true);
     }
   }
+
+  useEffect(() => {
+    if (!isAnswerSubmitted && answerInputRef.current) {
+      answerInputRef.current.focus();
+    }
+  }, [isAnswerSubmitted, showNext]);
 
   function updateStreak() {
     setStreak((prevStreak) => {
@@ -339,9 +356,6 @@ export default function Home() {
     setFeedback("");
     setFeedbackClass("");
     setIsAnswerSubmitted(false); // Reset submission state
-    if (answerInputRef.current) {
-      answerInputRef.current.focus();
-    }
   }
 
   return (
@@ -356,7 +370,7 @@ export default function Home() {
               ? `What is ${num1} × ${num2}?`
               : "Loading question..."}
           </div>
-          <div className={styles.timer}>
+          {/*<div className={styles.timer}>
             Time left: {timeLeft}s
             <div
               className={styles.timerBar}
@@ -365,7 +379,7 @@ export default function Home() {
                 backgroundColor: timeLeft <= 5 ? "#ff1744" : "#00e676",
               }}
             />
-          </div>
+          </div>*/}
           <input
             type="number"
             className={styles.answer}
@@ -392,7 +406,15 @@ export default function Home() {
             {feedback}
           </div>
           {showNext && (
-            <button onClick={handleNext} className={styles.btn}>
+            <button
+              onClick={handleNext}
+              className={styles.btn}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  handleNext();
+                }
+              }}
+            >
               Next Question →
             </button>
           )}
@@ -412,13 +434,13 @@ export default function Home() {
             Your final score is {score} out of {totalQuestions}.
           </p>
           <p>Your highest streak was {highestStreak} 🔥</p>
-          {score > 7 ? (
+          {score > 17 ? (
             <div className={styles.videoContainer}>
               <h3>🎥 Celebrate with this video! 🎥</h3>
               <iframe
                 width="560"
                 height="315"
-                src={funnyVideos[Math.floor(Math.random() * funnyVideos.length)].link}
+                src={getRandomVideo(funnyVideos).link}
                 title="YouTube video player"
                 allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                 allowFullScreen
